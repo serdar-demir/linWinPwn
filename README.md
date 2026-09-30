@@ -209,6 +209,7 @@ linWinPwn_proxychains -t <Domain_Controller_IP>  -d <AD_domain> -u <AD_user> [-p
 | `evil-winrm-py`         | ❌           | ✅       | ✅        | ❌             | ❌         | ✅         |
 | `GhostSPN`              | ✅           | ✅       | ✅        | ❌             | ❌         | ❌         |
 | `rbcdbrute`             | ❌           | ✅       | ✅        | ✅             | ✅         | ❌         |
+| `xfreerdp`              | ❌           | ✅       | ✅        | ✅             | ❌         | ❌         |
 
 #### LDAP Channel Binding support
 ldap3: netexec, ldapdomaindump (NTLM), Certipy, pre2k, bloodhound, ldeep, GroupPolicyBackdoor, relayking

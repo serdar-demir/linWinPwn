@@ -243,13 +243,14 @@ Modification menu
 26) Add CIFS and HTTP SPNs entries to computer with Unconstrained Deleg rights - ServicePrincipalName & msDS-AdditionalDnsHostName (Requires: Owner of computer)
 27) Add userPrincipalName to perform Kerberos impersonation of another user (Targeting Linux machines) (Requires: GenericWrite on user)
 28) Modify userPrincipalName to perform Certificate impersonation (ESC10) (Requires: GenericWrite on user)
-29) Add Constrained Delegation rights - uac: TRUSTED_TO_AUTH_FOR_DELEGATION (Requires: SeEnableDelegationPrivilege rights)
-30) Add HOST and LDAP SPN entries of DC to computer with Constrained Deleg rights - msDS-AllowedToDelegateTo (Requires: Owner of computer)
+29) Enable protocol transition (required for Constrained Delegation) - uac: TRUSTED_TO_AUTH_FOR_DELEGATION (Requires: SeEnableDelegationPrivilege)
+30) Add Constrained Deleg rights to Computer (Add HOST and LDAP SPN entries of DC) - msDS-AllowedToDelegateTo (Requires: Owner of computer)
 31) Add dMSA to exploit BadSuccessor on Server 2025 (Requires: GenericWrite on OU)
 32) Remove dMSA to clean after exploiting BadSuccessor (Requires: GenericWrite on OU)
 33) Modify custom attribute using bloodyad (Requires: GenericWrite)
 34) ESC4: Set altSecurityIdentities on target (Requires: Write on altSecurityIdentities)
 35) Modify msDS-GroupMSAMembership to allow GMSA password read (Requires: Write on msDS-GroupMSAMembership)
+36) Move object to a different OU (Requires: DELETE_CHILD on the source OU and CREATE_CHILD on the destination OU)
 ```
 
 Command Execution menu
@@ -259,6 +260,7 @@ Command Execution menu
 3) Open CMD console using psexec on target
 4) Open PowerShell console using evil-winrm on target
 5) Open PowerShell console using evil-winrm-py on target
+6) Open RDP session using xfreerdp on target
 ```
 
 Network Scan menu
